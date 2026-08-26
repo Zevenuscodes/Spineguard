@@ -1,138 +1,137 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
 class ApiService {
-  // User management
-  async register(userData) {
-    const response = await fetch(`${API_BASE_URL}/register`, {
-      method: 'POST',
+  constructor() {
+    this.token = localStorage.getItem('spineguard_token');
+  }
+
+  setToken(token) {
+    this.token = token;
+    localStorage.setItem('spineguard_token', token);
+  }
+
+  clearToken() {
+    this.token = null;
+    localStorage.removeItem('spineguard_token');
+  }
+
+  async makeRequest(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
       headers: {
         'Content-Type': 'application/json',
+        ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
+        ...options.headers,
       },
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
+    }
+  }
+
+  // Authentication
+  async register(userData) {
+    const response = await this.makeRequest('/register', {
+      method: 'POST',
       body: JSON.stringify(userData),
     });
-    return response.json();
+    
+    if (response.token) {
+      this.setToken(response.token);
+    }
+    
+    return response;
   }
 
   async login(credentials) {
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await this.makeRequest('/login', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(credentials),
     });
-    return response.json();
+    
+    if (response.token) {
+      this.setToken(response.token);
+    }
+    
+    return response;
   }
 
-  async getUserProfile(userId) {
-    const response = await fetch(`${API_BASE_URL}/user/${userId}/profile`);
-    return response.json();
+  // User Settings
+  async getUserSettings(userId) {
+    return await this.makeRequest(`/user/${userId}/settings`);
   }
 
-  // Posture monitoring
-  async startMonitoring(userId) {
-    const response = await fetch(`${API_BASE_URL}/monitor/start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: userId }),
+  async updateUserSettings(userId, settings) {
+    return await this.makeRequest(`/user/${userId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
     });
-    return response.json();
-  }
-
-  async stopMonitoring() {
-    const response = await fetch(`${API_BASE_URL}/monitor/stop`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return response.json();
-  }
-
-  async getMonitoringStatus() {
-    const response = await fetch(`${API_BASE_URL}/monitor/status`);
-    return response.json();
   }
 
   // Calibration
   async calibrateGoodPosture(userId, samples = 200) {
-    const response = await fetch(`${API_BASE_URL}/calibrate/good`, {
+    return await this.makeRequest('/calibrate/good', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: userId, samples }),
+      body: JSON.stringify({ samples }),
     });
-    return response.json();
   }
 
   async calibrateBadPosture(userId, samples = 200) {
-    const response = await fetch(`${API_BASE_URL}/calibrate/bad`, {
+    return await this.makeRequest('/calibrate/bad', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: userId, samples }),
+      body: JSON.stringify({ samples }),
     });
-    return response.json();
   }
 
-  // Model management
-  async trainModel(userId) {
-    const response = await fetch(`${API_BASE_URL}/models/train`, {
+  // Monitoring
+  async startMonitoring(userId) {
+    return await this.makeRequest('/monitoring/start', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: userId }),
     });
-    return response.json();
   }
 
+  async stopMonitoring() {
+    return await this.makeRequest('/monitoring/stop', {
+      method: 'POST',
+    });
+  }
+
+  async getMonitoringStatus() {
+    return await this.makeRequest('/monitoring/status');
+  }
+
+  // Models
   async getUserModels(userId) {
-    const response = await fetch(`${API_BASE_URL}/models/${userId}`);
-    return response.json();
+    return await this.makeRequest(`/user/${userId}/models`);
+  }
+
+  // Placeholder methods for future implementation
+  async trainModel(userId) {
+    throw new Error('Model training is handled automatically during monitoring start');
   }
 
   async activateModel(modelId, userId) {
-    const response = await fetch(`${API_BASE_URL}/models/${modelId}/activate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: userId }),
-    });
-    return response.json();
+    throw new Error('Model activation not implemented yet');
   }
 
   async deleteModel(modelId, userId) {
-    const response = await fetch(`${API_BASE_URL}/models/${modelId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: userId }),
-    });
-    return response.json();
+    throw new Error('Model deletion not implemented yet');
   }
 
-  // Settings
-  async getUserSettings(userId) {
-    const response = await fetch(`${API_BASE_URL}/settings/${userId}`);
-    return response.json();
-  }
-
-  async updateUserSettings(userId, settings) {
-    const response = await fetch(`${API_BASE_URL}/settings/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(settings),
-    });
-    return response.json();
+  async getUserProfile(userId) {
+    throw new Error('User profile endpoint not implemented yet');
   }
 }
 
